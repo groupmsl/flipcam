@@ -1,0 +1,21 @@
+[Unit]
+Description=Flip webcam into virtual camera
+# Never give up restarting (e.g. while the laptop is undocked).
+StartLimitIntervalSec=0
+
+[Service]
+Environment="FLIP_CAMERA=/dev/v4l/by-id/usb-REPLACE_WITH_YOUR_CAMERA-video-index0"
+Environment="FLIP_LOOP_DEV=/dev/video10"
+Environment="FLIP_RES=1280x720"
+Environment="FLIP_FPS=30"
+# hflip,vflip (180 degrees, default) | vflip | hflip | transpose=1 | transpose=2
+Environment="FLIP_FILTER=hflip,vflip"
+# 1 = open the real camera only while an app is using "Flipped Cam" (light off otherwise)
+# 0 = keep the camera open all the time
+Environment="FLIP_ONDEMAND=1"
+ExecStart=%h/.local/bin/flipcam-watch.sh
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
