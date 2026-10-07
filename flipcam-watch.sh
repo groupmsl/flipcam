@@ -11,9 +11,11 @@
 #                  camera (camera light off otherwise); 0 = keep it open all the time
 #
 # Behaviour:
-#   - Real camera missing (e.g. laptop undocked): waits quietly, picks it up when it returns.
-#   - On-demand mode: while nothing is using the virtual camera, a black placeholder keeps
-#     "Flipped Cam" visible in app camera lists, and the real camera stays closed.
+#   - Real camera missing (e.g. laptop undocked): no ffmpeg runs and "Flipped Cam" disappears
+#     from app camera lists. The script polls for the camera and brings it back when it returns.
+#   - On-demand mode: while the camera is present but nothing is using the virtual camera, a
+#     black placeholder keeps "Flipped Cam" visible in app camera lists, and the real camera
+#     stays closed (to avoid the camera light being on all the time).
 
 set -u
 
@@ -56,7 +58,7 @@ start_real() {
 # negotiates while it is showing stays correct when the real picture takes over.
 start_idle() {
 	ffmpeg -nostdin -hide_banner -loglevel warning \
-		-f lavfi -i "color=c=black:s=${RES}:r=${FPS}" \
+		-re -f lavfi -i "color=c=black:s=${RES}:r=${FPS}" \
 		-pix_fmt yuv420p -f v4l2 "$LOOP_DEV" &
 	PID=$!
 	STATE="idle"
@@ -84,22 +86,23 @@ while true; do
 	cam_ok=0
 	[ -e "$CAM" ] && cam_ok=1
 
-	want="idle"
+	# No camera: run no ffmpeg at all. With exclusive_caps=1 the loopback then reports itself as
+	# an output-only device, so "Flipped Cam" drops out of app camera lists until the camera returns.
+	want="none"
 	if [ "$cam_ok" = 1 ]; then
+		want="real"
 		if [ "$ONDEMAND" = 1 ]; then
 			readers="$(count_readers)"
 			if [ "$readers" -gt 0 ]; then idle_count=0; else idle_count=$((idle_count + 1)); fi
-			if [ "$readers" -gt 0 ] || { [ "$STATE" = "real" ] && [ "$idle_count" -lt "$IDLE_POLLS" ]; }; then
-				want="real"
+			if [ "$readers" -eq 0 ] && { [ "$STATE" != "real" ] || [ "$idle_count" -ge "$IDLE_POLLS" ]; }; then
+				want="idle"
 			fi
-		else
-			want="real"
 		fi
 	fi
 
 	if [ "$want" != "$STATE" ]; then
 		stop_ff
-		"start_${want}"
+		[ "$want" != "none" ] && "start_${want}"
 	fi
 
 	sleep "$POLL_SECS" &

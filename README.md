@@ -45,7 +45,7 @@ Teams usually mirrors your own preview, so judge orientation by holding up text 
 
 ## Undocking and docking
 
-If the camera disappears (e.g. laptop undocked), the service stays running and waits quietly. While the camera is missing, "Flipped Cam" shows a black picture. When the camera is connected again, the service carries on; no restart needed. If Teams was mid-call with the camera selected, toggle your video off and on after re-docking.
+If the camera disappears (e.g. laptop undocked), the service stays running and waits quietly. While the camera is missing, no ffmpeg runs and "Flipped Cam" drops out of app camera lists. The service checks for the camera every 2 seconds, and "Flipped Cam" reappears within a few seconds of re-docking; no restart needed.
 
 ## Camera light (on-demand mode)
 
